@@ -1,0 +1,13 @@
+[package]
+name = "download_m3mu"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytes = "1.6.0"
+colored = "2.1.0"
+reqwest = "0.12.5"
+serde = { version = "1.0.203", features = ["derive"] }
+serde_json = "1.0.120"
+tokio = { version = "1.38.0", features = ["rt-multi-thread"] }
+toml = "0.8.14"
