@@ -11,6 +11,7 @@ mod builder;
 use builder::M3U8Builder;
 
 struct M3U8 {
+    master_url: String,
     index_url: String,
     base_url: String,
     client: reqwest::Client,
@@ -19,8 +20,39 @@ struct M3U8 {
 }
 
 impl M3U8 {
+    async fn get_master(&mut self) {
+        println!("getting master playlist...\n{}", self.master_url);
+
+        let req = self.client.get(&self.master_url);
+        let res = req.send().await.unwrap();
+        let text = res.text().await.unwrap();
+
+        for line in text.lines() {
+            if line.starts_with("#") || line.is_empty() {
+                continue;
+            }
+
+            println!(
+                "setting index url to {}\nsetting base_url to {}",
+                self.index_url, self.base_url
+            );
+            self.index_url = line.to_owned();
+            self.base_url = self.master_url.rsplit_once("/").unwrap().0.to_owned();
+            self.base_url.push_str("/");
+
+            break;
+        }
+    }
+
     async fn get_index(&mut self) -> Vec<String> {
-        let req = self.client.get(&self.index_url);
+        if !self.master_url.is_empty() {
+            self.get_master().await;
+        }
+
+        let url = self.base_url.clone() + &self.index_url;
+        println!("getting m3mu index ...\n{}", url);
+
+        let req = self.client.get(url);
         let res = req.send().await.unwrap();
         let text = res.text().await.unwrap();
 

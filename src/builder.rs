@@ -11,6 +11,10 @@ use crate::M3U8;
 
 #[derive(Debug, Deserialize)]
 pub struct M3U8Builder {
+
+    #[serde(default)]
+    master_url: String,
+
     #[serde(default)]
     index_url: String,
 
@@ -29,8 +33,8 @@ impl M3U8Builder {
             Ok(f) => f,
             Err(_) => {
                 return M3U8Builder {
+                    master_url: String::new(),
                     index_url: String::new(),
-
                     base_url: String::new(),
 
                     output_dir: "m3mu".to_owned(),
@@ -82,9 +86,16 @@ impl M3U8Builder {
             .build()
             .unwrap();
 
+        let mut base_url = self.base_url;
+
+        if !base_url.ends_with("/") {
+            base_url.push_str("/");
+        }
+
         M3U8 {
+            master_url: self.master_url,
             index_url: self.index_url,
-            base_url: self.base_url,
+            base_url: base_url,
             client,
             data: None,
             output_dir: PathBuf::from_str(&self.output_dir).unwrap(),
