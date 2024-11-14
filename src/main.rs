@@ -106,24 +106,36 @@ impl M3U8 {
             files.push(path);
         }
 
+        let pattern = regex::Regex::new(r"seg-(?<number>\d+)-").unwrap();
+
         let mut files: Vec<_> = files
             .iter()
             .map(|file| {
-                let num = file
-                    .to_str()
-                    .unwrap()
-                    .split_once("-")
-                    .unwrap()
-                    .1
-                    .split_once("-")
-                    .unwrap()
-                    .0;
-                let num = num.parse::<u32>().expect("could not parse seg-number");
+
+                let file_name = file.to_str().unwrap();
+
+                let m = pattern.captures(file_name).expect("could not find seg-num");
+                let num = m.name("number").unwrap().as_str();
+
+                let num = num.parse::<u32>().expect("could not parse seg-num");
                 (num, file)
+                
+
+                // let num = file
+                //     .to_str()
+                //     .unwrap()
+                //     .split_once("-")
+                //     .unwrap()
+                //     .1
+                //     .split_once("-")
+                //     .unwrap()
+                //     .0;
+                // let num = num.parse::<u32>().expect("could not parse seg-number");
+                // (num, file)
             })
             .collect();
 
-        files.sort_by(|a, b| a.cmp(b));
+        files.sort_by(|a, b| a.0.cmp(&b.0));
 
         let mut concat = self.output_dir.clone();
         concat.push("concat");
