@@ -7,7 +7,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::M3U8;
+use crate::m3u8::M3U8;
 
 #[derive(Debug, Deserialize)]
 pub struct M3U8Builder {
@@ -21,15 +21,15 @@ pub struct M3U8Builder {
     #[serde(default)]
     base_url: String,
 
-    output_dir: String,
+    output_dir: PathBuf,
 
     #[serde(skip)]
     header_map: HeaderMap,
 }
 
 impl M3U8Builder {
-    pub fn new() -> M3U8Builder {
-        let file = match std::fs::File::open("config.toml") {
+    pub fn new_with_config(path: PathBuf) -> M3U8Builder {
+        let file = match std::fs::File::open(path) {
             Ok(f) => f,
             Err(_) => {
                 return M3U8Builder {
@@ -37,7 +37,7 @@ impl M3U8Builder {
                     index_url: String::new(),
                     base_url: String::new(),
 
-                    output_dir: "m3mu".to_owned(),
+                    output_dir: PathBuf::from_str("output").unwrap(),
                     header_map: HeaderMap::new(),
                 }
             }
@@ -53,6 +53,18 @@ impl M3U8Builder {
         config
     }
 
+    pub fn new_with_m3u8_url(url: String) -> M3U8Builder {
+        return M3U8Builder {
+            master_url: String::new(),
+            index_url: url,
+
+            base_url: String::new(),
+
+            output_dir: PathBuf::from_str("output").unwrap(),
+            header_map: HeaderMap::new(),
+        }
+    }
+
     fn create_header_map(load_header_map: HashMap<String, String>) -> reqwest::header::HeaderMap {
         let mut headers = reqwest::header::HeaderMap::new();
 
@@ -64,10 +76,10 @@ impl M3U8Builder {
         headers
     }
 
-    pub fn load_headers(mut self) -> Self {
-        let file = match std::fs::File::open("headers.json") {
+    pub fn load_headers(&mut self, path: &PathBuf) {
+        let file = match std::fs::File::open(path) {
             Ok(f) => f,
-            Err(_) => return self,
+            Err(_) => return,
         };
 
         let buffer = BufReader::new(file);
@@ -77,28 +89,34 @@ impl M3U8Builder {
 
         let header_map = M3U8Builder::create_header_map(header_map);
         self.header_map = header_map;
-        self
+
     }
 
-    pub fn build(self) -> M3U8 {
+    pub fn set_output_dir(&mut self, output_dir: PathBuf) {
+        self.output_dir = output_dir;
+    }
+
+    pub fn build(mut self) -> M3U8 {
         let client = reqwest::ClientBuilder::new()
             .default_headers(self.header_map)
             .build()
             .unwrap();
 
-        let mut base_url = self.base_url;
-
-        if !base_url.ends_with("/") {
-            base_url.push_str("/");
+        if self.index_url != "" {
+            self.base_url= self.index_url.clone();
+            let (base, _) = self.base_url.rsplit_once("/").unwrap();
+            self.base_url = base.to_string();
+            self.base_url.push('/');
         }
+        
 
         M3U8 {
             master_url: self.master_url,
             index_url: self.index_url,
-            base_url: base_url,
+            base_url: self.base_url,
             client,
             data: None,
-            output_dir: PathBuf::from_str(&self.output_dir).unwrap(),
+            output_dir: self.output_dir,
         }
     }
 }
