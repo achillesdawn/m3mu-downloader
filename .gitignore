@@ -2,3 +2,4 @@
 headers.json
 config.toml
 output
+*.ts

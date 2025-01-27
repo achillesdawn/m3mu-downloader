@@ -17,5 +17,8 @@ pub struct Args {
     pub headers: Option<PathBuf>,
 
     #[arg(long)]
-    pub output_dir: Option<PathBuf>
+    pub output_dir: Option<PathBuf>,
+
+    #[arg(long, value_name = "false")]
+    pub concat: bool,
 }

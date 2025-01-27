@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, str::FromStr, sync::Arc};
 
 mod m3u8;
 use clap::Parser;
@@ -23,7 +23,17 @@ fn main() {
                 m3u8 = M3U8Builder::new_with_config(args.config.unwrap());
             } else if args.url.is_some() {
                 m3u8 = M3U8Builder::new_with_m3u8_url(args.url.unwrap());
+            } else if args.concat {
+                println!("concating");
+                if let Some(output_dir) = args.output_dir {
+                    m3u8::concat(output_dir);
+
+                } else {
+                    m3u8::concat(PathBuf::from_str("output").unwrap());
+                }
+                return;
             } else {
+                println!("no actionable args found");
                 return;
             }
 

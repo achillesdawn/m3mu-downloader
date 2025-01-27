@@ -33,6 +33,57 @@ pub struct M3U8 {
     pub output_dir: PathBuf,
 }
 
+pub fn concat(path: PathBuf) {
+    let mut files = Vec::new();
+
+    for entry in std::fs::read_dir(&path).unwrap() {
+        let entry = entry.unwrap();
+
+        let path = entry.path();
+        files.push(path);
+    }
+
+    let pattern = regex::Regex::new(r"seg-(\d+)-|_(\d+).ts|(\d+).ts").unwrap();
+
+    let mut files: Vec<_> = files
+        .iter()
+        .map(|file| {
+            let file_name = file.to_str().unwrap();
+
+            let m = pattern.captures(file_name).expect("could not find seg-num");
+
+            let num = m.get(1).or(m.get(2).or(m.get(3))).unwrap().as_str();
+
+            let num = match num.parse::<u32>() {
+                Ok(n) => n,
+                Err(_) => {
+                    println!("could not parse .ts number:  {}", num);
+                    panic!();
+                }
+            };
+
+            (num, file)
+        })
+        .collect();
+
+    files.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut concat = path.clone();
+    concat.push("concat");
+    let concat = concat.with_extension("ts");
+
+    let concat = std::fs::File::create(concat).expect("Could not create concat file");
+    let mut buf_writer = BufWriter::new(concat);
+
+    for (_, path) in files {
+        let file = std::fs::File::open(path).expect("Could not open file");
+        let mut buf_reader = BufReader::new(file);
+        std::io::copy(&mut buf_reader, &mut buf_writer).expect("failed to copy to concat");
+
+        std::fs::remove_file(path).unwrap();
+    }
+}
+
 impl M3U8 {
     async fn get_master(&mut self) {
         println!("getting master playlist...\n{}", self.master_url);
@@ -111,54 +162,6 @@ impl M3U8 {
     }
 
     pub fn concat(&self) {
-        let mut files = Vec::new();
-
-        for entry in std::fs::read_dir(&self.output_dir).unwrap() {
-            let entry = entry.unwrap();
-
-            let path = entry.path();
-            files.push(path);
-        }
-
-        let pattern = regex::Regex::new(r"seg-(\d+)-|_(\d+).ts").unwrap();
-
-        let mut files: Vec<_> = files
-            .iter()
-            .map(|file| {
-                let file_name = file.to_str().unwrap();
-
-                let m = pattern.captures(file_name).expect("could not find seg-num");
-
-                let num = m.get(1).or(m.get(2)).unwrap().as_str();
-
-                let num = match num.parse::<u32>() {
-                    Ok(n) => n,
-                    Err(_) => {
-                        println!("could not parse .ts number:  {}", num);
-                        panic!();
-                    }
-                };
-
-                (num, file)
-
-            })
-            .collect();
-
-        files.sort_by(|a, b| a.0.cmp(&b.0));
-
-        let mut concat = self.output_dir.clone();
-        concat.push("concat");
-        let concat = concat.with_extension("ts");
-
-        let concat = std::fs::File::create(concat).expect("Could not create concat file");
-        let mut buf_writer = BufWriter::new(concat);
-
-        for (_, path) in files {
-            let file = std::fs::File::open(path).expect("Could not open file");
-            let mut buf_reader = BufReader::new(file);
-            std::io::copy(&mut buf_reader, &mut buf_writer).expect("failed to copy to concat");
-
-            std::fs::remove_file(path).unwrap();
-        }
+        concat(self.output_dir.clone());
     }
 }
