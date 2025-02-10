@@ -72,8 +72,9 @@ impl M3U8Builder {
         };
     }
 
-    pub fn set_full_url(&mut self) {
+    pub fn set_full_url( mut self)  -> Self {
         self.full_url = true;
+        return self
     }
 
     pub fn build(mut self) -> M3U8 {
