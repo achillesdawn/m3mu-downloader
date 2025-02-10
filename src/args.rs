@@ -5,12 +5,13 @@ use clap::Parser;
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct Args {
-    /// Sets a custom config.toml file
-    #[arg(short, long, value_name = "FILE")]
-    pub config: Option<PathBuf>,
 
     #[arg(long)]
     pub url: Option<String>,
+
+    /// path to file
+    #[arg(long)]
+    pub file: Option<PathBuf>,
 
     /// Path to headers.json file
     #[arg(long)]
@@ -21,4 +22,6 @@ pub struct Args {
 
     #[arg(long, value_name = "false")]
     pub concat: bool,
+
+
 }

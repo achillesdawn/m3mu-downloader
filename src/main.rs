@@ -19,15 +19,16 @@ fn main() {
         .block_on(async {
             let mut m3u8: M3U8Builder;
 
-            if args.config.is_some() {
-                m3u8 = M3U8Builder::new_with_config(args.config.unwrap());
-            } else if args.url.is_some() {
-                m3u8 = M3U8Builder::new_with_m3u8_url(args.url.unwrap());
+            if let Some(url) = args.url {
+                m3u8 = M3U8Builder::new_with_m3u8_url(url);
+            } else if let Some(file) = args.file {
+                let content = std::fs::read_to_string(file).unwrap();
+                m3u8 = M3U8Builder::with_data(content);
+                m3u8.set_full_url();
             } else if args.concat {
                 println!("concating");
                 if let Some(output_dir) = args.output_dir {
                     m3u8::concat(output_dir);
-
                 } else {
                     m3u8::concat(PathBuf::from_str("output").unwrap());
                 }
@@ -49,9 +50,12 @@ fn main() {
 
             m3u8.create_output_dir();
 
-            let links = m3u8.get_index().await;
-
-            dbg!(&links);
+            let links: Vec<String>;
+            if m3u8.data.is_none() {
+                links = m3u8.get_index().await;
+            } else {
+                links = m3u8.data.as_ref().unwrap().links.clone()
+            }
 
             let client = Arc::new(m3u8);
 
@@ -61,7 +65,7 @@ fn main() {
                 let client_clone = client.clone();
 
                 set.spawn(async move {
-                    client_clone.get_url(&link).await;
+                    client_clone.get_url(link).await;
                 });
             }
 

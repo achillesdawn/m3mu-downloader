@@ -3,6 +3,9 @@ use std::{
     path::PathBuf,
 };
 
+use url::Url;
+
+#[derive(Debug)]
 pub struct M3u8Data {
     pub links: Vec<String>,
 }
@@ -31,6 +34,7 @@ pub struct M3U8 {
     pub client: reqwest::Client,
     pub data: Option<M3u8Data>,
     pub output_dir: PathBuf,
+    pub full_url: bool,
 }
 
 pub fn concat(path: PathBuf) {
@@ -85,6 +89,8 @@ pub fn concat(path: PathBuf) {
 }
 
 impl M3U8 {
+
+
     async fn get_master(&mut self) {
         println!("getting master playlist...\n{}", self.master_url);
 
@@ -128,18 +134,29 @@ impl M3U8 {
         links
     }
 
-    pub async fn get_url(&self, url: &String) {
-        let mut full_url = self.base_url.clone();
-        full_url.push_str(&url);
+    pub async fn get_url(&self, mut url: String) {
 
-        let req = self.client.get(full_url);
+        if !self.full_url {
+            let mut full_url = self.base_url.clone();
+            full_url.push_str(&url);
+            url = full_url.clone();
+        }
+        
+        let name = Url::parse(&url).unwrap();
+        
+        let req = self.client.get(url);
 
         let res = req.send().await.unwrap();
         let data = res.bytes().await.unwrap();
-        self.write_to_disk(data, url);
+
+        let name = name.path().rsplit_once("/").unwrap().1.to_owned();
+
+        self.write_to_disk(data, name);
     }
 
-    fn write_to_disk(&self, data: bytes::Bytes, name: &String) {
+
+
+    fn write_to_disk(&self, data: bytes::Bytes, name: String) {
         let filename = name.split_once(".ts").unwrap().0;
 
         let mut path = self.output_dir.clone();
